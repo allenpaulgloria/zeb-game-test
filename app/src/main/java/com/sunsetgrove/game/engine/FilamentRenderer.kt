@@ -64,6 +64,7 @@ class FilamentRenderer(
     private val models: GltfModelManager
 
     private var playerHandle: LoadedModelHandle? = null
+    private var chickenHandle: LoadedModelHandle? = null
     private var jetpackHandle: LoadedModelHandle? = null
     private val vehicleHandles = HashMap<Int, LoadedModelHandle>()
     private val npcHandles = HashMap<Int, LoadedModelHandle>()
@@ -182,9 +183,9 @@ class FilamentRenderer(
             }
         }
 
-        // Buildings across all 5 districts
+        // Buildings across all 5 districts (normalized to DistrictMap target heights)
         for (b in DistrictMap.buildings) {
-            models.spawnModel(b.modelKey, useTargetHeightNormalization = false)?.let {
+            models.spawnModel(b.modelKey, useTargetHeightNormalization = true)?.let {
                 models.setWorldTransform(it, b.x, 0.12f, b.z, yawRad = b.yawDeg * Math3D.DEG_TO_RAD)
             }
         }
@@ -206,6 +207,8 @@ class FilamentRenderer(
 
     private fun spawnPlayerAndJetpack() {
         playerHandle = models.spawnModel("character_player", useTargetHeightNormalization = true)
+        chickenHandle = models.spawnModel("character_chicken", useTargetHeightNormalization = true)
+        chickenHandle?.let { models.setVisible(it, false) }
         jetpackHandle = models.spawnModel("gear_jetpack", useTargetHeightNormalization = true)
         jetpackHandle?.let { models.setVisible(it, false) }
     }
@@ -247,11 +250,13 @@ class FilamentRenderer(
     private fun syncDynamicEntities(dt: Float, sim: GameSimulation) {
         val lm = engine.lightManager
 
-        // 1. Player & Jetpack
+        // 1. Player (or Quaternius Chicken when CLUCKINBELL / CHICKEN cheat is ON!) & Jetpack
+        val isChicken = sim.cheats.isActive(com.sunsetgrove.game.gameplay.CheatCodeManager.CODE_CHICKEN)
+        val showAvatar = sim.playerMode != PlayerMode.DRIVING
         playerHandle?.let { ph ->
-            val showPlayer = sim.playerMode != PlayerMode.DRIVING
-            models.setVisible(ph, showPlayer)
-            if (showPlayer) {
+            val showHuman = showAvatar && !isChicken
+            models.setVisible(ph, showHuman)
+            if (showHuman) {
                 models.setWorldTransform(
                     ph,
                     sim.playerPos.x, sim.playerPos.y, sim.playerPos.z,
@@ -259,6 +264,19 @@ class FilamentRenderer(
                     pitchRad = sim.playerPitchVisualRad,
                 )
                 ph.updateAnimation(sim.playerAnimState, dt)
+            }
+        }
+        chickenHandle?.let { ch ->
+            val showChicken = showAvatar && isChicken
+            models.setVisible(ch, showChicken)
+            if (showChicken) {
+                models.setWorldTransform(
+                    ch,
+                    sim.playerPos.x, sim.playerPos.y, sim.playerPos.z,
+                    yawRad = sim.playerYawRad,
+                    pitchRad = sim.playerPitchVisualRad,
+                )
+                ch.updateAnimation(sim.playerAnimState, dt)
             }
         }
 

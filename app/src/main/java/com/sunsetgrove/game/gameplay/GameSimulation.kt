@@ -186,6 +186,11 @@ class GameSimulation(
         if (res.addWantedStars > 0) wanted.addStars(res.addWantedStars, cheats.isActive(CheatCodeManager.CODE_NEVER_WANTED))
         if (res.setMaxWanted) wanted.setMaxWanted(cheats.isActive(CheatCodeManager.CODE_NEVER_WANTED))
         if (res.blowUpNearbyCars) detonateNearbyVehicles()
+        if (res.code == CheatCodeManager.CODE_CHICKEN && res.activated) {
+            pendingSoundEvents = pendingSoundEvents.copy(chickenCluck = true)
+            vehicleToastName = "CLUCKIN' BELL CHICKEN MODE!"
+            vehicleToastTimer = 2.8f
+        }
         res.weatherPreset?.let { weatherPreset = it }
         return res
     }
@@ -575,7 +580,14 @@ class GameSimulation(
         var vy = playerVel.y
         if (onGround) {
             vy = if (input.jumpPressed) {
-                if (cheats.isActive(CheatCodeManager.CODE_KANGAROO)) 14.8f else 5.8f
+                when {
+                    cheats.isActive(CheatCodeManager.CODE_KANGAROO) -> 14.8f
+                    cheats.isActive(CheatCodeManager.CODE_CHICKEN) -> {
+                        pendingSoundEvents = pendingSoundEvents.copy(chickenCluck = true)
+                        9.4f // Chicken flutter-jump!
+                    }
+                    else -> 5.8f
+                }
             } else 0f
         } else {
             vy -= 18.5f * dt
@@ -964,6 +976,7 @@ class GameSimulation(
             sirenActive = sirenOn,
             jetpackActive = playerMode == PlayerMode.JETPACK && jetpackThrusting,
             isSwimming = playerMode == PlayerMode.SWIMMING,
+            isChickenMode = cheats.isActive(CheatCodeManager.CODE_CHICKEN),
             soundEvents = soundEvents,
         )
     }

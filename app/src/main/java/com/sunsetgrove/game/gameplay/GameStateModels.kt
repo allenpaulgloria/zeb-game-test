@@ -139,6 +139,7 @@ data class SoundEvents(
     val respectTriggered: Boolean = false,
     val gunshotFired: Boolean = false,
     val batHit: Boolean = false,
+    val chickenCluck: Boolean = false,
 )
 
 data class HudSnapshot(
@@ -176,5 +177,6 @@ data class HudSnapshot(
     val sirenActive: Boolean = false,
     val jetpackActive: Boolean = false,
     val isSwimming: Boolean = false,
+    val isChickenMode: Boolean = false,
     val soundEvents: SoundEvents = SoundEvents(),
 )

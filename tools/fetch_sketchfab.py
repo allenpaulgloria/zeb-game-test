@@ -130,13 +130,102 @@ def download_with_token(token: str, include_full_map: bool = False) -> None:
             print(f"  [err] {target_file}: {exc}")
 
 
+def fetch_collection(collection_uid: str) -> List[dict]:
+    url: Optional[str] = f"https://api.sketchfab.com/v3/collections/{collection_uid}/models"
+    models: List[dict] = []
+    while url:
+        req = urllib.request.Request(url, headers={"User-Agent": "SunsetGroveAndroid/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        for item in data.get("results", []):
+            lic = (item.get("license") or {}).get("slug", "standard")
+            models.append({
+                "uid": item["uid"],
+                "name": item["name"],
+                "faceCount": item.get("faceCount", 0),
+                "animationCount": item.get("animationCount", 0),
+                "isDownloadable": item.get("isDownloadable", False),
+                "license": lic,
+                "viewerUrl": item.get("viewerUrl", ""),
+            })
+        url = data.get("next")
+    print(f"TOTAL MODELS IN COLLECTION {collection_uid}: {len(models)}")
+    for i, m in enumerate(models, 1):
+        print(
+            f"{i:2d}. {m['uid']} | {m['name']} | faces={m['faceCount']} "
+            f"| anims={m['animationCount']} | dl={m['isDownloadable']} | {m['viewerUrl']}"
+        )
+    out_file = ROOT / "tools" / "user_sketchfab_collection.json"
+    out_file.write_text(json.dumps(models, indent=2), encoding="utf-8")
+    return models
+
+
+# Curated mobile-friendly picks directly from the user's Sketchfab collection (https://skfb.ly/pQDuQ)
+COLLECTION_PICKS: Dict[str, tuple] = {
+    "character_player.glb": ("76fb93b3c3b34a1f9f60235da7f1875f", "CJ (24k faces)"),
+    "character_ballas.glb": ("50c36a68a24f49b9bf5b85a4b4015fbf", "Gangster Rigged (16k faces)"),
+    "character_pedestrian.glb": ("774ca00136b94d359e7d3ba425a5c57a", "IWI Male Character 02 Animated (20k faces)"),
+    "car_sedan.glb": ("4d5aac74abed45eaafad6ff73f85501b", "Low Poly Lada 2107 (5.5k faces)"),
+    "car_muscle.glb": ("8445af9c07694f9b93f94b3f6c0ccd87", "Mercedes-Maybach Vision 6 (60k faces)"),
+    "vehicle_tank.glb": ("cd6cbdf835564c91bb74a3c80a21b862", "Armoured Personnel Carrier (19k faces)"),
+    "vehicle_monster_truck.glb": ("61d2800a3a9548db81f21eebc1f257fb", "Ford Excursion Heavy SUV (80k faces)"),
+    "weapon_gun.glb": ("b28b42850f404d8cbf3b8604ec5366d6", "Colt Gold Pistol (2.7k faces)"),
+    "prop_concrete_barrier.glb": ("209e7dc032de483cae12eb5c3e7f1bcf", "Barricade Set (8.2k faces)"),
+    "world_san_andreas_map.glb": ("f80855b6286944459392fc723ed0b50f", "GM Bigcity Map (84k faces)"),
+}
+
+
+def download_uid_map(uid_map: Dict[str, tuple], token: str) -> None:
+    OVERRIDES_DIR.mkdir(parents=True, exist_ok=True)
+    headers = {
+        "Authorization": f"Token {token}",
+        "User-Agent": "SunsetGroveAndroid/1.0",
+    }
+    for target_file, (uid, name) in uid_map.items():
+        dl_url = f"https://api.sketchfab.com/v3/models/{uid}/download"
+        print(f"Downloading {target_file} <- {name} ({uid})...")
+        try:
+            req = urllib.request.Request(dl_url, headers=headers)
+            meta = json.loads(urllib.request.urlopen(req, timeout=20).read().decode("utf-8"))
+            glb_info = meta.get("glb") or meta.get("gltf")
+            if not glb_info or "url" not in glb_info:
+                print(f"  [skip] No GLB/GLTF archive available for {uid}")
+                continue
+            blob = urllib.request.urlopen(glb_info["url"], timeout=90).read()
+            out_path = OVERRIDES_DIR / target_file
+            if blob[:4] == b"glTF":
+                out_path.write_bytes(blob)
+                print(f"  [ok] Wrote direct GLB -> {out_path} ({len(blob) // 1024} KB)")
+            else:
+                with zipfile.ZipFile(io.BytesIO(blob)) as zf:
+                    glb_names = [n for n in zf.namelist() if n.lower().endswith(".glb")]
+                    if glb_names:
+                        out_path.write_bytes(zf.read(glb_names[0]))
+                        print(f"  [ok] Extracted {glb_names[0]} -> {out_path}")
+                    else:
+                        print(f"  [warn] Zip for {uid} contained glTF+bins instead of single GLB.")
+        except Exception as exc:
+            print(f"  [err] {target_file}: {exc}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--search", action="store_true", help="Search Sketchfab for downloadable GTA models")
+    parser.add_argument("--collection", type=str, default=None, help="Inspect all models in a Sketchfab collection UID")
+    parser.add_argument("--from-collection", action="store_true", help="Download curated picks from user's GTA collection (requires --token)")
     parser.add_argument("--token", type=str, default=None, help="Your Sketchfab API token to download GLB overrides")
     parser.add_argument("--include-map", action="store_true", help="Also download the full GTA San Andreas map mesh")
     args = parser.parse_args()
 
+    if args.collection:
+        fetch_collection(args.collection)
+        return 0
+    if args.from_collection and args.token:
+        picks = dict(COLLECTION_PICKS)
+        if not args.include_map:
+            picks.pop("world_san_andreas_map.glb", None)
+        download_uid_map(picks, args.token)
+        return 0
     if args.token:
         download_with_token(args.token, include_full_map=args.include_map)
         return 0

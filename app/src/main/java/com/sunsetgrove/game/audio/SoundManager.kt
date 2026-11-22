@@ -28,6 +28,7 @@ class SoundManager(context: Context) {
     private val sfxGunshot: Int
     private val sfxBatHit: Int
     private val sfxSwim: Int
+    private val sfxChicken: Int
 
     private var engineStreamId: Int = 0
     private var sirenStreamId: Int = 0
@@ -65,6 +66,7 @@ class SoundManager(context: Context) {
         sfxGunshot = loadAsset(context, "audio/sfx_gunshot.wav")
         sfxBatHit = loadAsset(context, "audio/sfx_bat_hit.wav")
         sfxSwim = loadAsset(context, "audio/sfx_swim.wav")
+        sfxChicken = loadAsset(context, "audio/sfx_chicken.wav")
     }
 
     private fun loadAsset(context: Context, path: String): Int = try {
@@ -84,6 +86,7 @@ class SoundManager(context: Context) {
         if (ev.carDoorSlam) playOneShot(sfxCarDoor, 0.72f, 1.0f)
         if (ev.gunshotFired) playOneShot(sfxGunshot, 0.78f, 1.0f)
         if (ev.batHit) playOneShot(sfxBatHit, 0.85f, 1.0f)
+        if (ev.chickenCluck) playOneShot(sfxChicken, 0.90f, 1.0f)
         if (ev.tankCannonFired) playOneShot(sfxTankCannon, 1.0f, 0.92f)
         if (ev.explosionTriggered) playOneShot(sfxTankCannon, 0.95f, 0.72f)
         if (ev.crashIntensity > 0.15f) playOneShot(sfxCrash, ev.crashIntensity.coerceAtMost(0.95f), 0.9f + ev.crashIntensity * 0.2f)

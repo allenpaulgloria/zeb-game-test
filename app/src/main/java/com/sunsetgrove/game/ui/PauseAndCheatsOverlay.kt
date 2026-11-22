@@ -140,7 +140,7 @@ private fun PauseMenuCard(
 
         PauseMenuButton(label = "RESUME GAME", accent = Color(0xFF4CAF50), onClick = onResume)
         PauseMenuButton(
-            label = if (activeCheatCount > 0) "CHEAT CODES  ($activeCheatCount ACTIVE)" else "CHEAT CODES  (22 REAL GTA:SA)",
+            label = if (activeCheatCount > 0) "CHEAT CODES  ($activeCheatCount ACTIVE)" else "CHEAT CODES  (23 CHEATS)",
             accent = Color(0xFFFFB300),
             onClick = onOpenCheats,
         )

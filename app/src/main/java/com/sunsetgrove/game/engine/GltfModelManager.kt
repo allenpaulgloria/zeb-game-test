@@ -24,10 +24,14 @@ data class LoadedModelHandle(
     fun updateAnimation(stateName: String, dt: Float) {
         val animator = asset.instance.animator
         if (animator.animationCount <= 0) return
-        val idx = animMap[stateName] ?: animMap["Idle"] ?: 0
+        val speedMult = if (stateName == "Run" && !animMap.containsKey("Run")) 1.6f else 1.0f
+        val idx = animMap[stateName]
+            ?: (if (stateName == "Run") animMap["Walk"] else null)
+            ?: animMap["Idle"]
+            ?: 0
         val duration = animator.getAnimationDuration(idx)
         if (duration > 1e-4f) {
-            animTimeSec = (animTimeSec + dt) % duration
+            animTimeSec = (animTimeSec + dt * speedMult) % duration
             animator.applyAnimation(idx, animTimeSec)
             animator.updateBoneMatrices()
         }
@@ -108,16 +112,27 @@ class GltfModelManager(
             Math3D.composeMatrix(0f, 0f, 0f, yawRad = spec.yawOffsetDeg * Math3D.DEG_TO_RAD)
         }
 
-        // Map animation clips by friendly names (Soldier.glb has Idle, Walk, Run!)
+        // Map Quaternius / Mixamo animation clips with exact-suffix priority (e.g. CharacterArmature|Idle over Idle_Sword)
         val animator = asset.instance.animator
         val animMap = HashMap<String, Int>()
         for (i in 0 until animator.animationCount) {
-            val name = animator.getAnimationName(i)
+            val rawName = animator.getAnimationName(i)
+            val leaf = rawName.substringAfterLast('|')
             when {
-                name.contains("idle", ignoreCase = true) -> animMap["Idle"] = i
-                name.contains("walk", ignoreCase = true) -> animMap["Walk"] = i
-                name.contains("run", ignoreCase = true) -> animMap["Run"] = i
+                leaf.equals("Idle", ignoreCase = true) || leaf.equals("Idle_Neutral", ignoreCase = true) -> animMap["Idle"] = i
+                leaf.equals("Walk", ignoreCase = true) -> animMap["Walk"] = i
+                leaf.equals("Run", ignoreCase = true) -> animMap["Run"] = i
+                leaf.equals("Jump", ignoreCase = true) -> animMap["Jump"] = i
+                leaf.equals("Gun_Shoot", ignoreCase = true) -> animMap["Shoot"] = i
             }
+        }
+        // Fallback substring match for any clips not matched exactly
+        for (i in 0 until animator.animationCount) {
+            val name = animator.getAnimationName(i)
+            if (!animMap.containsKey("Idle") && name.contains("idle", ignoreCase = true)) animMap["Idle"] = i
+            if (!animMap.containsKey("Walk") && name.contains("walk", ignoreCase = true)) animMap["Walk"] = i
+            if (!animMap.containsKey("Run") && name.contains("run", ignoreCase = true)) animMap["Run"] = i
+            if (!animMap.containsKey("Jump") && name.contains("jump", ignoreCase = true)) animMap["Jump"] = i
         }
 
         // Locate Turret node for Rhino Army Tank independent turret rotation

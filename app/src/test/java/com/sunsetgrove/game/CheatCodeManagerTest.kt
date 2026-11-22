@@ -15,17 +15,30 @@ class CheatCodeManagerTest {
 
     @Test
     fun catalogHasAll22AuthenticSanAndreasCodes() {
-        assertEquals(22, CheatCodeManager.catalog.size)
+        assertEquals(23, CheatCodeManager.catalog.size)
         val codes = CheatCodeManager.catalog.map { it.code }.toSet()
         assertTrue(codes.contains("YECGAA"))   // Jetpack (ROCKETMAN)
         assertTrue(codes.contains("AIWPRTON")) // Rhino Tank
         assertTrue(codes.contains("AGBDLCID")) // Monster Truck (MONSTERMASH)
+        assertTrue(codes.contains("CLUCKINBELL")) // Chicken Mode (CHICKEN)
         assertTrue(codes.contains("HESOYAM"))
         assertTrue(codes.contains("AEZAKMI"))
         assertTrue(codes.contains("BAGUVIX"))
         assertTrue(codes.contains("RIPAZHA"))
         assertTrue(codes.contains("LJSPQK"))
         assertTrue(codes.contains("OFVIAC"))
+    }
+
+    @Test
+    fun chickenCheatTogglesChickenMode() {
+        val sim = GameSimulation()
+        val on = sim.triggerCheatCode("CHICKEN")
+        assertNotNull(on)
+        assertEquals("CLUCKINBELL", on!!.code)
+        assertTrue(sim.cheats.isActive("CLUCKINBELL"))
+        val off = sim.triggerCheatCode("CLUCKINBELL")
+        assertEquals("Cheat deactivated", off!!.bannerMessage)
+        assertFalse(sim.cheats.isActive("CLUCKINBELL"))
     }
 
     @Test

@@ -1,33 +1,24 @@
-# Sunset Grove — Third-Party 3D Assets & Licenses
+# Temu Theft Auto — 3D Asset Credits & Licenses
 
-All external assets are sourced from free, trusted CC0 / MIT repositories.
+All bundled character, vehicle, tank, chicken, palm tree, weapon, and building models are CC0 / open-licensed assets sourced from **Quaternius** (via Poly Pizza) and **Poly Haven**.
 
-## Bundled Asset Sources
-
-| Asset | License | Source |
-|---|---|---|
-| `models/character_player.glb` | MIT (mrdoob/three.js, rigged Mixamo humanoid) | https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Soldier.glb |
-| `texture:asphalt` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/asphalt_02 |
-| `texture:concrete` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/concrete_floor_worn_001 |
-| `texture:sand` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/aerial_beach_01 |
-| `texture:grass` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/dry_ground_01 |
-| `texture:stucco_warm` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/plastered_wall |
-| `texture:brick_city` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/red_brick |
-| `texture:bark` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/bark_brown_02 |
-| `texture:metal_rust` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/rusty_metal_02 |
-| `models\props\street_lamp.glb` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/street_lamp_01 |
-| `models\props\fire_hydrant.glb` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/fire_hydrant |
-| `models\props\concrete_barrier.glb` | CC0 1.0 (Poly Haven) | https://polyhaven.com/a/concrete_road_barrier |
-
-## Zero-Code Custom Model Overrides (Sketchfab CC-BY / Adobe Mixamo)
-
-To swap in any higher-detail realistic `.glb` model from **Sketchfab** (CC0/CC-BY) or **Adobe Mixamo**:
-1. Download the model in `.glb` format.
-2. Place it inside `app/src/main/assets/models/overrides/` using the target filename:
-   - `character_player.glb` — Rigged third-person protagonist (Idle / Walk / Run animations)
-   - `car_police.glb` — 1994 Caprice / LAPD-style cruiser
-   - `car_muscle.glb` / `car_sedan.glb` — 90s West Coast muscle car / lowrider
-   - `vehicle_tank.glb` — Realistic military tank (name turret node `Turret` for rotation)
-   - `vehicle_monster_truck.glb` — Lifted Monster Truck
-   - `gear_jetpack.glb` — Twin-thruster Jetpack
-3. Rebuild the APK (`./gradlew assembleDebug`). `GltfModelManager` automatically detects overrides and normalizes scale & ground contact.
+| Game Slot | Model | Creator | License | Source |
+|---|---|---|---|---|
+| `character_chicken` | ineV9pU5VL | Quaternius | CC0 | https://poly.pizza/m/ineV9pU5VL |
+| `character_player` | BTALZymknF | Quaternius | CC0 | https://poly.pizza/m/BTALZymknF |
+| `character_pedestrian` | 75ikp7NEDx | Quaternius | CC0 | https://poly.pizza/m/75ikp7NEDx |
+| `character_ballas` | Btfn3G5Xv4 | Quaternius | CC0 | https://poly.pizza/m/Btfn3G5Xv4 |
+| `car_police` | BwwnUrWGmV | Quaternius | CC0 | https://poly.pizza/m/BwwnUrWGmV |
+| `car_sedan` | 1Gvsbc72Alm | Quaternius | CC0 | https://poly.pizza/m/1Gvsbc72Alm |
+| `car_muscle` | 1mkmFkAz5v | Quaternius | CC0 | https://poly.pizza/m/1mkmFkAz5v |
+| `car_hotring` | 1mkmFkAz5v | Quaternius | CC0 | https://poly.pizza/m/1mkmFkAz5v |
+| `car_bloodring` | x43lOScTpN | Quaternius | CC0 | https://poly.pizza/m/x43lOScTpN |
+| `vehicle_monster_truck` | xsMtZhBkxL | Quaternius | CC0 | https://poly.pizza/m/xsMtZhBkxL |
+| `vehicle_tank` | Dc4k4CooN3 | Quaternius | CC0 | https://poly.pizza/m/Dc4k4CooN3 |
+| `gear_jetpack` | 2qqg9SbrsZ | Quaternius | CC0 | https://poly.pizza/m/2qqg9SbrsZ |
+| `prop_palm_tree` | VYslw9DEi6 | Quaternius | CC0 | https://poly.pizza/m/VYslw9DEi6 |
+| `weapon_gun` | J3i9KDQ3kt | Quaternius | CC0 | https://poly.pizza/m/J3i9KDQ3kt |
+| `world_bungalow` | YlADpCJU8U | Quaternius | CC0 | https://poly.pizza/m/YlADpCJU8U |
+| `world_storefront` | 5qD-9AvW0eh | Quaternius | CC0 | https://poly.pizza/m/5qD-9AvW0eh |
+| `world_tower_med` | GoF3zph6WI | Quaternius | CC0 | https://poly.pizza/m/GoF3zph6WI |
+| `world_tower_tall` | AVCS8jUd2l | Quaternius | CC0 | https://poly.pizza/m/AVCS8jUd2l |

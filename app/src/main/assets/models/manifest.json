@@ -4,7 +4,7 @@
     "character_player": {
       "path": "models/character_player.glb",
       "targetHeight": 1.8,
-      "yawOffsetDeg": 180.0
+      "yawOffsetDeg": 0.0
     },
     "car_sedan": {
       "path": "models/car_sedan.glb",
@@ -13,7 +13,7 @@
     },
     "car_muscle": {
       "path": "models/car_muscle.glb",
-      "targetHeight": 1.46,
+      "targetHeight": 1.44,
       "yawOffsetDeg": 0.0
     },
     "car_police": {
@@ -23,7 +23,7 @@
     },
     "car_hotring": {
       "path": "models/car_hotring.glb",
-      "targetHeight": 1.44,
+      "targetHeight": 1.42,
       "yawOffsetDeg": 0.0
     },
     "car_bloodring": {
@@ -33,12 +33,12 @@
     },
     "vehicle_tank": {
       "path": "models/vehicle_tank.glb",
-      "targetHeight": 2.48,
+      "targetHeight": 2.5,
       "yawOffsetDeg": 0.0
     },
     "vehicle_monster_truck": {
       "path": "models/vehicle_monster_truck.glb",
-      "targetHeight": 3.4,
+      "targetHeight": 3.35,
       "yawOffsetDeg": 0.0
     },
     "gear_jetpack": {
@@ -129,12 +129,12 @@
     "character_pedestrian": {
       "path": "models/character_pedestrian.glb",
       "targetHeight": 1.76,
-      "yawOffsetDeg": 180.0
+      "yawOffsetDeg": 0.0
     },
     "character_ballas": {
       "path": "models/character_ballas.glb",
       "targetHeight": 1.82,
-      "yawOffsetDeg": 180.0
+      "yawOffsetDeg": 0.0
     },
     "fx_bullet": {
       "path": "models/props/bullet_tracer.glb",
@@ -154,6 +154,16 @@
     "prop_barrel": {
       "path": "models/props/street_barrel.glb",
       "targetHeight": 1.0,
+      "yawOffsetDeg": 0.0
+    },
+    "character_chicken": {
+      "path": "models/character_chicken.glb",
+      "targetHeight": 1.05,
+      "yawOffsetDeg": 0.0
+    },
+    "weapon_gun": {
+      "path": "models/props/weapon_gun.glb",
+      "targetHeight": 0.25,
       "yawOffsetDeg": 0.0
     }
   }

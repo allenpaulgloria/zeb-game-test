@@ -44,6 +44,7 @@ class CheatCodeManager {
         const val CODE_HESOYAM = "HESOYAM"
         const val CODE_BAGUVIX = "BAGUVIX"
         const val CODE_KANGAROO = "KANGAROO"
+        const val CODE_CHICKEN = "CLUCKINBELL"
 
         const val CODE_RHINO_TANK = "AIWPRTON"
         const val CODE_MONSTER_TRUCK = "AGBDLCID"
@@ -86,6 +87,11 @@ class CheatCodeManager {
             CheatDefinition(
                 CODE_KANGAROO, null, "Mega Super Jump",
                 "Triples on-foot jump height to leap onto porches and walls",
+                CheatCategory.PLAYER, CheatMode.TOGGLE,
+            ),
+            CheatDefinition(
+                CODE_CHICKEN, "CHICKEN", "Chicken Mode (Cluckin' Bell)",
+                "Turns the player into a Quaternius Chicken with flutter-jump & clucks!",
                 CheatCategory.PLAYER, CheatMode.TOGGLE,
             ),
 

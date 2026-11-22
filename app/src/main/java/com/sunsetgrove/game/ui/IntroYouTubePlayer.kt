@@ -1,5 +1,6 @@
 package com.sunsetgrove.game.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,10 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sunsetgrove.game.R
 
 object IntroMusicConfig {
     const val YOUTUBE_REFERENCE_URL = "https://youtu.be/IeIUm-aqaCg?si=vXmCyZb0KGrciZXf"
@@ -64,13 +68,13 @@ fun IntroMusicScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = "SUNSET GROVE",
-                color = Color(0xFFFFCA28),
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Black,
-                fontStyle = FontStyle.Italic,
-                letterSpacing = 3.sp,
+            Image(
+                painter = painterResource(id = R.drawable.app_logo_banner),
+                contentDescription = "Temu Theft Auto",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .width(240.dp)
+                    .height(126.dp),
             )
             Text(
                 text = "GROVE STREET  •  IDLEWOOD  •  VINEWOOD  •  VERONA BEACH",

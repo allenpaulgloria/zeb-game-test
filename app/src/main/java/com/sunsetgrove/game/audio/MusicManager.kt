@@ -29,7 +29,7 @@ class MusicManager(private val context: Context) {
         val candidates = listOf(
             "audio/custom_intro_music.mp3" to "Custom Intro Theme",
             "audio/custom_intro_music.ogg" to "Custom Intro Theme",
-            "audio/music_intro_theme.wav" to "Sunset Grove Radio (92 BPM West Coast Theme)",
+            "audio/music_intro_theme.wav" to "Temu Theft Auto Radio (92 BPM West Coast Theme)",
         )
         for ((path, label) in candidates) {
             try {

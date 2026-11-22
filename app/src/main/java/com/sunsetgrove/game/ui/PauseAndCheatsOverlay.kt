@@ -122,7 +122,7 @@ private fun PauseMenuCard(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "SUNSET GROVE",
+            text = "TEMU THEFT AUTO",
             color = Color(0xFFFFB74D),
             fontSize = 24.sp,
             fontWeight = FontWeight.Black,

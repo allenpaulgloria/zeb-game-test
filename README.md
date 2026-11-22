@@ -1,4 +1,4 @@
-# Sunset Grove — Native Android 3D GTA: San Andreas-Style Sandbox
+# Temu Theft Auto — Native Android 3D GTA: San Andreas-Style Sandbox
 
 A native Android (**Kotlin + Google Filament PBR + Jetpack Compose**) third-person 3D open-world sandbox game inspired by *Grand Theft Auto: San Andreas*.
 

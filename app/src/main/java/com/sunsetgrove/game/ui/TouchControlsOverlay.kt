@@ -84,8 +84,10 @@ class TouchInputBridge {
 fun TouchControlsOverlay(
     snapshot: HudSnapshot,
     bridge: TouchInputBridge,
+    trackPlayingInGame: Boolean,
     onPauseClick: () -> Unit,
     onCameraToggleClick: () -> Unit,
+    onToggleTrackInGame: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         // Right-half invisible touch-drag camera orbit surface (behind buttons)
@@ -100,7 +102,7 @@ fun TouchControlsOverlay(
                 }
         )
 
-        // Top-Left: PAUSE (||) button, CAM toggle, & Cheat Activated corner toast
+        // Top-Left: PAUSE (||) button, CAM toggle, Music Track toggle, & Cheat Activated corner toast
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -110,6 +112,11 @@ fun TouchControlsOverlay(
         ) {
             TapActionChip("|| PAUSE", Color(0xFFFFB300), onPauseClick)
             TapActionChip("CAM", Color(0xFF90CAF9), onCameraToggleClick)
+            TapActionChip(
+                label = if (trackPlayingInGame) "♫ TRACK: ON" else "♫ TRACK: OFF",
+                accent = if (trackPlayingInGame) Color(0xFF66BB6A) else Color(0xFF78909C),
+                onClick = onToggleTrackInGame,
+            )
             CheatActivatedCornerToast(
                 message = snapshot.cheatToastMessage,
                 alpha = snapshot.cheatToastAlpha,

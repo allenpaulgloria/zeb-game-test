@@ -52,11 +52,14 @@ import kotlinx.coroutines.delay
 fun PauseAndCheatsOverlay(
     activeCheatCodes: Set<String>,
     audioMuted: Boolean,
+    playTrackInGame: Boolean,
     lastCheatMessage: String,
     onResume: () -> Unit,
     onRespawn: () -> Unit,
     onClearCheats: () -> Unit,
     onToggleAudio: () -> Unit,
+    onToggleTrackInGame: () -> Unit,
+    onReplayIntro: () -> Unit,
     onCheatDoubleTapped: (String) -> Unit,
 ) {
     var showCheatScreen by remember { mutableStateOf(false) }
@@ -75,11 +78,14 @@ fun PauseAndCheatsOverlay(
             PauseMenuCard(
                 activeCheatCount = activeCheatCodes.size,
                 audioMuted = audioMuted,
+                playTrackInGame = playTrackInGame,
                 onResume = onResume,
                 onOpenCheats = { showCheatScreen = true },
                 onRespawn = onRespawn,
                 onClearCheats = onClearCheats,
                 onToggleAudio = onToggleAudio,
+                onToggleTrackInGame = onToggleTrackInGame,
+                onReplayIntro = onReplayIntro,
             )
         } else {
             CheatCodesScreen(
@@ -97,25 +103,28 @@ fun PauseAndCheatsOverlay(
 private fun PauseMenuCard(
     activeCheatCount: Int,
     audioMuted: Boolean,
+    playTrackInGame: Boolean,
     onResume: () -> Unit,
     onOpenCheats: () -> Unit,
     onRespawn: () -> Unit,
     onClearCheats: () -> Unit,
     onToggleAudio: () -> Unit,
+    onToggleTrackInGame: () -> Unit,
+    onReplayIntro: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .width(380.dp)
             .background(Color(0xEE121215), RoundedCornerShape(10.dp))
             .border(2.dp, Color(0xFFFF9800), RoundedCornerShape(10.dp))
-            .padding(22.dp),
+            .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = "SUNSET GROVE",
             color = Color(0xFFFFB74D),
-            fontSize = 26.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 2.sp,
         )
@@ -127,7 +136,7 @@ private fun PauseMenuCard(
             letterSpacing = 1.5.sp,
         )
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
 
         PauseMenuButton(label = "RESUME GAME", accent = Color(0xFF4CAF50), onClick = onResume)
         PauseMenuButton(
@@ -135,9 +144,15 @@ private fun PauseMenuCard(
             accent = Color(0xFFFFB300),
             onClick = onOpenCheats,
         )
+        PauseMenuButton(
+            label = if (playTrackInGame) "♫ INTRO TRACK IN-GAME: ON" else "♫ INTRO TRACK IN-GAME: OFF",
+            accent = if (playTrackInGame) Color(0xFF66BB6A) else Color(0xFF90A4AE),
+            onClick = onToggleTrackInGame,
+        )
+        PauseMenuButton(label = "REPLAY INTRO VIDEO", accent = Color(0xFFFF8A65), onClick = onReplayIntro)
         PauseMenuButton(label = "RESPAWN AT GROVE CIRCLE", accent = Color(0xFF64B5F6), onClick = onRespawn)
         PauseMenuButton(
-            label = if (audioMuted) "AUDIO: MUTED" else "AUDIO: ON",
+            label = if (audioMuted) "GAME SFX: MUTED" else "GAME SFX: ON",
             accent = Color(0xFFB0BEC5),
             onClick = onToggleAudio,
         )

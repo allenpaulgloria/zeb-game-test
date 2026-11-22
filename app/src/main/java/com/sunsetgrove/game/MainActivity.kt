@@ -27,21 +27,28 @@ import com.sunsetgrove.game.engine.FilamentRenderer
 import com.sunsetgrove.game.gameplay.ControlInput
 import com.sunsetgrove.game.gameplay.GameSimulation
 import com.sunsetgrove.game.gameplay.HudSnapshot
+import com.sunsetgrove.game.gameplay.SoundEvents
 import com.sunsetgrove.game.ui.PauseAndCheatsOverlay
+import com.sunsetgrove.game.ui.PersistentIntroAndTrackLayer
 import com.sunsetgrove.game.ui.SanAndreasBannerOverlay
 import com.sunsetgrove.game.ui.SanAndreasStatusHud
 import com.sunsetgrove.game.ui.TouchControlsOverlay
 import com.sunsetgrove.game.ui.TouchInputBridge
+import com.sunsetgrove.game.ui.YouTubeTrackController
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
 
     private lateinit var sim: GameSimulation
     private lateinit var soundManager: SoundManager
+    private lateinit var youTubeController: YouTubeTrackController
     private var filamentRenderer: FilamentRenderer? = null
     private val touchBridge = TouchInputBridge()
 
     private val hudState = MutableStateFlow(HudSnapshot())
+    private var showIntroUi by mutableStateOf(true)
+    private var playTrackInGameUi by mutableStateOf(true)
+    private var miniPlayerExpandedUi by mutableStateOf(false)
     private var audioMutedUi by mutableStateOf(false)
     private var lastCheatBannerUi by mutableStateOf("")
 
@@ -61,11 +68,37 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
         }
 
         sim = GameSimulation()
+        sim.isPaused = true // Hold simulation paused while the YouTube intro plays
         soundManager = SoundManager(this)
+        youTubeController = YouTubeTrackController(this)
 
         setContent {
             SunsetGroveGameScreen()
         }
+    }
+
+    private fun setPlayTrackInGame(enabled: Boolean) {
+        playTrackInGameUi = enabled
+        if (!showIntroUi) {
+            if (enabled) youTubeController.play() else youTubeController.pause()
+        }
+    }
+
+    private fun enterGameFromIntro() {
+        showIntroUi = false
+        sim.isPaused = false
+        if (playTrackInGameUi) {
+            youTubeController.play()
+        } else {
+            youTubeController.pause()
+        }
+    }
+
+    private fun replayIntro() {
+        showIntroUi = true
+        sim.isPaused = true
+        soundManager.stopLoops()
+        youTubeController.restartAndPlay()
     }
 
     @Composable
@@ -84,17 +117,21 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
                 },
             )
 
-            // 2. Live San Andreas HUD & Multi-Touch Controls (when not paused)
-            if (!snapshot.isPaused) {
+            // 2. Live San Andreas HUD & Multi-Touch Controls (when playing & not paused)
+            if (!showIntroUi && !snapshot.isPaused) {
                 TouchControlsOverlay(
                     snapshot = snapshot,
                     bridge = touchBridge,
+                    trackPlayingInGame = playTrackInGameUi,
                     onPauseClick = {
                         sim.isPaused = true
                         soundManager.stopLoops()
                     },
                     onCameraToggleClick = {
                         filamentRenderer?.cameraController?.toggleDistancePreset()
+                    },
+                    onToggleTrackInGame = {
+                        setPlayTrackInGame(!playTrackInGameUi)
                     },
                 )
 
@@ -110,11 +147,25 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
                     subtext = snapshot.bannerSubtext,
                     onTapRespawn = { sim.respawnAtGroveCircle(chargeHospitalFee = true) },
                 )
-            } else {
-                // 3. San Andreas Pause Menu & Double-Tap Cheat Codes Overlay
+            }
+
+            // 3. Persistent YouTube Intro & In-Game Track Layer (IeIUm-aqaCg)
+            PersistentIntroAndTrackLayer(
+                controller = youTubeController,
+                showIntro = showIntroUi,
+                playTrackInGame = playTrackInGameUi,
+                miniPlayerExpanded = miniPlayerExpandedUi,
+                onTogglePlayInGame = { enabled -> setPlayTrackInGame(enabled) },
+                onToggleMiniExpanded = { miniPlayerExpandedUi = !miniPlayerExpandedUi },
+                onEnterGame = { enterGameFromIntro() },
+            )
+
+            // 4. San Andreas Pause Menu & Double-Tap Cheat Codes Overlay (above mini-player)
+            if (!showIntroUi && snapshot.isPaused) {
                 PauseAndCheatsOverlay(
                     activeCheatCodes = snapshot.activeCheatCodes,
                     audioMuted = audioMutedUi,
+                    playTrackInGame = playTrackInGameUi,
                     lastCheatMessage = lastCheatBannerUi,
                     onResume = { sim.isPaused = false },
                     onRespawn = { sim.respawnAtGroveCircle(chargeHospitalFee = false) },
@@ -126,16 +177,19 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
                         audioMutedUi = !audioMutedUi
                         soundManager.muted = audioMutedUi
                     },
+                    onToggleTrackInGame = {
+                        setPlayTrackInGame(!playTrackInGameUi)
+                    },
+                    onReplayIntro = { replayIntro() },
                     onCheatDoubleTapped = { code ->
                         val res = sim.triggerCheatCode(code)
                         if (res != null) {
                             lastCheatBannerUi = "${res.bannerMessage}: ${res.code}"
-                            // Play cheat chime immediately even while paused!
                             if (!soundManager.muted) {
                                 soundManager.update(
                                     hudState.value.copy(
                                         isPaused = false,
-                                        soundEvents = com.sunsetgrove.game.gameplay.SoundEvents(cheatActivated = true),
+                                        soundEvents = SoundEvents(cheatActivated = true),
                                     )
                                 )
                             }
@@ -207,10 +261,15 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
         when (keyCode) {
             KeyEvent.KEYCODE_E, KeyEvent.KEYCODE_F -> touchBridge.enterExitQueued = true
             KeyEvent.KEYCODE_SPACE -> touchBridge.jumpQueued = true
-            KeyEvent.KEYCODE_ENTER -> touchBridge.fireCannonQueued = true
+            KeyEvent.KEYCODE_ENTER -> {
+                if (showIntroUi) enterGameFromIntro() else touchBridge.fireCannonQueued = true
+            }
+            KeyEvent.KEYCODE_M -> setPlayTrackInGame(!playTrackInGameUi)
             KeyEvent.KEYCODE_ESCAPE, KeyEvent.KEYCODE_P -> {
-                sim.isPaused = !sim.isPaused
-                if (sim.isPaused) soundManager.stopLoops()
+                if (!showIntroUi) {
+                    sim.isPaused = !sim.isPaused
+                    if (sim.isPaused) soundManager.stopLoops()
+                }
             }
         }
         return super.onKeyDown(keyCode, event)
@@ -225,18 +284,21 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
         super.onResume()
         lastFrameNanos = 0L
         Choreographer.getInstance().postFrameCallback(this)
+        youTubeController.onActivityResume(shouldBePlaying = showIntroUi || playTrackInGameUi)
     }
 
     override fun onPause() {
         super.onPause()
         Choreographer.getInstance().removeFrameCallback(this)
         soundManager.stopLoops()
+        youTubeController.onActivityPause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         Choreographer.getInstance().removeFrameCallback(this)
         soundManager.release()
+        youTubeController.destroy()
         filamentRenderer?.destroy()
         filamentRenderer = null
     }

@@ -7,43 +7,53 @@ import com.sunsetgrove.game.world.Vec2
 import com.sunsetgrove.game.world.Vec3
 import kotlin.math.abs
 import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlin.math.max
 import kotlin.random.Random
 
 /**
- * Drives both ambient civilian traffic along RoadGraph lanes and pursuing LSPD police cruisers
- * with A* road routing, direct intercept PIT steering, flashing lightbars, and 3+ star roadblocks.
+ * Drives:
+ * - Always-active Roaming LSPD Patrol Cruisers across the entire extended map (4 patrols even at 0 stars!)
+ * - Escalating Police A* pursuit + intercept PIT steering + 3+ star roadblocks when wanted > 0
+ * - Ambient civilian traffic cruising RoadGraph lanes (respecting YLTEICZ aggressive drivers)
  */
 class PoliceAndTrafficAi(
     private val roadGraph: RoadGraph,
     private val physics: ArcadeVehiclePhysics,
 ) {
+    companion object {
+        const val BASE_PATROL_POLICE_COUNT = 4
+    }
+
     private val rng = Random(1992)
 
     fun updatePoliceSpawning(
         vehicles: MutableList<VehicleState>,
-        desiredPolice: Int,
+        desiredWantedPolice: Int,
         playerPos: Vec3,
         nextId: () -> Int,
     ) {
+        // Keep at least BASE_PATROL_POLICE_COUNT roaming around the map at all times!
+        val targetPoliceCount = max(BASE_PATROL_POLICE_COUNT, desiredWantedPolice)
         val activePolice = vehicles.filter { it.isPoliceAi && !it.isWrecked && !it.isPlayerControlled }
 
-        // Despawn excess police far from player when wanted level drops
-        if (desiredPolice == 0) {
-            vehicles.removeAll { it.isPoliceAi && !it.isPlayerControlled && it.pos.horizontalDistanceTo(playerPos) > 45f }
-            for (v in activePolice) {
-                v.sirenActive = false
+        // Despawn excess pursuit units once wanted level clears (keeping the 4 roaming patrols)
+        if (activePolice.size > targetPoliceCount) {
+            var toRemove = activePolice.size - targetPoliceCount
+            val iter = vehicles.iterator()
+            while (iter.hasNext() && toRemove > 0) {
+                val v = iter.next()
+                if (v.isPoliceAi && !v.isPlayerControlled && v.pos.horizontalDistanceTo(playerPos) > 55f) {
+                    iter.remove()
+                    toRemove--
+                }
             }
-            return
         }
 
-        // Spawn missing police cruisers on road nodes 48m..130m away from player
-        val needed = desiredPolice - activePolice.size
+        val needed = targetPoliceCount - vehicles.count { it.isPoliceAi && !it.isWrecked && !it.isPlayerControlled }
         if (needed > 0) {
             val candidates = roadGraph.nodes.filter { node ->
                 val d = node.pos.distanceTo(playerPos.xz())
-                d in 46f..135f
+                d in 44f..170f
             }.shuffled(rng)
 
             var spawned = 0
@@ -51,6 +61,7 @@ class PoliceAndTrafficAi(
                 if (spawned >= needed) break
                 val occupied = vehicles.any { it.pos.xz().distanceTo(node.pos) < 10f }
                 if (occupied) continue
+                val nextNode = node.neighbors.firstOrNull() ?: node.id
                 val yaw = Math3D.yawFromDirection(playerPos.x - node.pos.x, playerPos.z - node.pos.z)
                 val cruiser = VehicleState(
                     id = nextId(),
@@ -58,9 +69,10 @@ class PoliceAndTrafficAi(
                     pos = Vec3(node.pos.x, 0.25f, node.pos.z),
                     yawRad = yaw,
                     isPoliceAi = true,
-                    sirenActive = true,
-                    aiTargetNodeId = node.id,
-                    isRoadblock = desiredPolice >= 3 && spawned == needed - 1 && rng.nextFloat() < 0.4f,
+                    hasNpcDriver = true,
+                    sirenActive = desiredWantedPolice > 0,
+                    aiTargetNodeId = nextNode,
+                    isRoadblock = desiredWantedPolice >= 3 && spawned == needed - 1 && rng.nextFloat() < 0.35f,
                 )
                 vehicles.add(cruiser)
                 spawned++
@@ -102,24 +114,22 @@ class PoliceAndTrafficAi(
         cheats: CheatCodeManager,
     ) {
         if (wantedStars == 0) {
-            // Cruise calmly after chase ends
-            stepTrafficCar(v, playerPos, aggressive = false, dt, world, cheats)
+            // Roam around the extended map calmly on patrol!
+            v.isRoadblock = false
+            stepTrafficCar(v, playerPos, aggressive = false, dt, world, cheats, patrolSpeed = 13.5f)
             return
         }
 
         val distToPlayer = v.pos.horizontalDistanceTo(playerPos)
-        // Roadblock unit holds across street until player gets close
         if (v.isRoadblock && distToPlayer > 28f && distToPlayer < 85f) {
             physics.stepVehicle(v, 0f, 0f, 1f, true, false, false, v.yawRad, dt, world, cheats)
             return
         }
 
-        val targetPos: Vec2 = if (distToPlayer < 40f) {
-            // Direct intercept lead
+        val targetPos: Vec2 = if (distToPlayer < 42f) {
             val lead = (distToPlayer / 30f).coerceIn(0f, 1.2f)
             Vec2(playerPos.x + playerVel.x * lead, playerPos.z + playerVel.z * lead)
         } else {
-            // A* street pursuit
             v.aiRepathTimer -= dt
             if (v.aiRepathTimer <= 0f || v.aiPath.isEmpty()) {
                 val startId = roadGraph.nearestNode(v.pos.xz()).id
@@ -136,7 +146,6 @@ class PoliceAndTrafficAi(
 
         val desiredYaw = atan2(targetPos.x - v.pos.x, targetPos.z - v.pos.z)
         val angleErr = Math3D.normalizeAngleRad(desiredYaw - v.yawRad)
-        // Recall: turning right (steer > 0) decreases yawRad; turning left (steer < 0) increases yawRad
         val steer = Math3D.clamp(-angleErr * 1.8f, -1f, 1f)
         val chaseThrottle = (0.58f + wantedStars * 0.07f).coerceAtMost(1.0f)
         val gas = if (abs(angleErr) > 1.3f && v.speed > 9f) 0.25f else chaseThrottle
@@ -152,9 +161,9 @@ class PoliceAndTrafficAi(
         dt: Float,
         world: CollisionWorld,
         cheats: CheatCodeManager,
+        patrolSpeed: Float = 11.5f,
     ) {
         val targetNode = roadGraph.nodes[v.aiTargetNodeId.coerceIn(0, roadGraph.nodes.lastIndex)]
-        // Offset to right-hand lane
         val dx = targetNode.pos.x - v.pos.x
         val dz = targetNode.pos.z - v.pos.z
         val dist = kotlin.math.sqrt(dx * dx + dz * dz)
@@ -169,11 +178,10 @@ class PoliceAndTrafficAi(
         val angleErr = Math3D.normalizeAngleRad(desiredYaw - v.yawRad)
         val steer = Math3D.clamp(-angleErr * 1.5f, -1f, 1f)
 
-        // Slow down if directly approaching player on foot
         val distToPlayer = v.pos.horizontalDistanceTo(playerPos)
-        val targetSpeed = if (aggressive) 22f else 11.5f
+        val targetSpeed = if (aggressive) 22f else patrolSpeed
         val shouldBrake = !aggressive && distToPlayer < 8.5f && v.speed > 3f
-        val gas = if (!shouldBrake && v.speed < targetSpeed) (if (aggressive) 0.92f else 0.45f) else 0f
+        val gas = if (!shouldBrake && v.speed < targetSpeed) (if (aggressive) 0.92f else 0.48f) else 0f
         val brake = if (shouldBrake) 0.85f else 0f
 
         physics.stepVehicle(v, steer, gas, brake, false, false, false, v.yawRad, dt, world, cheats)

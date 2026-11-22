@@ -9,8 +9,9 @@ data class RoadNode(
 )
 
 /**
- * Connected street intersection graph powering:
- * - Ambient traffic lane navigation
+ * Extended connected street intersection graph powering:
+ * - Roaming LSPD police patrols across the whole map
+ * - Ambient civilian traffic lane navigation
  * - Police A* pursuit routing
  * - Radar minimap street geometry
  */
@@ -19,8 +20,8 @@ class RoadGraph {
 
     init {
         val list = mutableListOf<RoadNode>()
-        val xs = listOf(-70f, 0f, 70f)
-        val zs = listOf(-140f, -80f, 0f, 80f, 140f)
+        val xs = listOf(-70f, 0f, 70f, 140f)
+        val zs = listOf(-160f, -80f, 0f, 80f, 160f)
         val grid = Array(xs.size) { IntArray(zs.size) }
 
         for (ix in xs.indices) {
@@ -30,7 +31,6 @@ class RoadGraph {
                 list.add(RoadNode(id, Vec2(xs[ix], zs[iz])))
             }
         }
-        // Connect grid north-south & east-west
         for (ix in xs.indices) {
             for (iz in zs.indices) {
                 val id = grid[ix][iz]
@@ -40,9 +40,9 @@ class RoadGraph {
                 if (iz < zs.lastIndex) list[id].neighbors.add(grid[ix][iz + 1])
             }
         }
-        // Grove Circle cul-de-sac spur east of (70, 0)
+        // Grove Street cul-de-sac node between (70, 0) and (140, 0)
         val groveCenterId = list.size
-        list.add(RoadNode(groveCenterId, Vec2(118f, 0f)))
+        list.add(RoadNode(groveCenterId, Vec2(114f, 0f)))
         val eastCentralId = grid[2][2] // (70, 0)
         list[eastCentralId].neighbors.add(groveCenterId)
         list[groveCenterId].neighbors.add(eastCentralId)
@@ -63,7 +63,6 @@ class RoadGraph {
         return best
     }
 
-    /** A* shortest path between two road node IDs. Returns ordered waypoint positions. */
     fun findPath(startId: Int, goalId: Int): List<Vec2> {
         if (startId == goalId) return listOf(nodes[goalId].pos)
 

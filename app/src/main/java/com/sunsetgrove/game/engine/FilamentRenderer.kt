@@ -18,16 +18,19 @@ import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.Gltfio
 import com.sunsetgrove.game.gameplay.BannerType
 import com.sunsetgrove.game.gameplay.GameSimulation
+import com.sunsetgrove.game.gameplay.NpcRole
 import com.sunsetgrove.game.gameplay.PlayerMode
 import com.sunsetgrove.game.world.DistrictMap
 import com.sunsetgrove.game.world.Math3D
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
  * Native Google Filament PBR 3D renderer for Sunset Grove.
- * Owns the SurfaceView lifecycle, static West Coast district models, dynamic player /
- * Jetpack / vehicle / Rhino Tank turret / projectile / explosion meshes, and dynamic lights.
+ * Renders the extended 640m x 640m San Andreas world (or Sketchfab map override),
+ * player + Jetpack, walking street pedestrians, armed Purple GTA Ballas Gang,
+ * carjacked drivers, vehicles, Rhino Tank rotating turret, bullets, & explosions.
  */
 class FilamentRenderer(
     private val context: Context,
@@ -60,14 +63,14 @@ class FilamentRenderer(
     private val lighting: GoldenHourLighting
     private val models: GltfModelManager
 
-    // Dynamic handles synchronized with GameSimulation
     private var playerHandle: LoadedModelHandle? = null
     private var jetpackHandle: LoadedModelHandle? = null
     private val vehicleHandles = HashMap<Int, LoadedModelHandle>()
+    private val npcHandles = HashMap<Int, LoadedModelHandle>()
     private val projectileHandles = HashMap<Int, LoadedModelHandle>()
+    private val bulletHandles = HashMap<Int, LoadedModelHandle>()
     private val explosionHandles = HashMap<Int, LoadedModelHandle>()
 
-    // Dynamic point lights: jetpack thruster glow + police flashing siren light
     private val jetpackLightEntity: Int
     private val sirenLightEntity: Int
 
@@ -95,7 +98,6 @@ class FilamentRenderer(
         lighting = GoldenHourLighting(engine, scene, view)
         models = GltfModelManager(context, engine, scene)
 
-        // Create dynamic point lights
         jetpackLightEntity = EntityManager.get().create()
         LightManager.Builder(LightManager.Type.POINT)
             .color(1.0f, 0.56f, 0.16f)
@@ -144,18 +146,28 @@ class FilamentRenderer(
     }
 
     private fun buildStaticWorld() {
-        // Base California ground, Verona Beach sand strip, Pacific ocean horizon
+        // Extended California ground, Verona Beach sand strip, & swimmable Pacific Ocean!
         models.spawnModel("world_ground_grass", useTargetHeightNormalization = false)?.let {
-            models.setWorldTransform(it, 20f, 0f, 0f)
+            val tm = engine.transformManager
+            val worldMat = Math3D.composeMatrix(80f, 0f, 0f, sx = 1.45f, sy = 1f, sz = 1.45f)
+            tm.setTransform(tm.getInstance(it.asset.root), Math3D.multiplyMat4(worldMat, it.normMatrix))
         }
         models.spawnModel("world_ground_beach", useTargetHeightNormalization = false)?.let {
-            models.setWorldTransform(it, -125f, 0.02f, 0f)
+            val tm = engine.transformManager
+            val worldMat = Math3D.composeMatrix(-106f, 0.02f, 0f, sx = 0.65f, sy = 1f, sz = 1.55f)
+            tm.setTransform(tm.getInstance(it.asset.root), Math3D.multiplyMat4(worldMat, it.normMatrix))
         }
         models.spawnModel("world_ground_ocean", useTargetHeightNormalization = false)?.let {
-            models.setWorldTransform(it, -238f, -0.02f, 0f)
+            val tm = engine.transformManager
+            val worldMat = Math3D.composeMatrix(-240f, -0.02f, 0f, sx = 1.65f, sy = 1f, sz = 1.65f)
+            tm.setTransform(tm.getInstance(it.asset.root), Math3D.multiplyMat4(worldMat, it.normMatrix))
+        }
+        // Wooden Verona Beach Pier extending out into the swimmable Pacific Ocean
+        models.spawnModel("world_beach_pier", useTargetHeightNormalization = false)?.let {
+            models.setWorldTransform(it, -142f, 0.1f, -20f)
         }
 
-        // Asphalt road grid & cul-de-sac
+        // Asphalt road grid & Grove Street cul-de-sac
         for (seg in DistrictMap.roadSegments) {
             models.spawnModel("world_road_strip", useTargetHeightNormalization = false)?.let {
                 val scaleX = seg.width / 14f
@@ -170,7 +182,7 @@ class FilamentRenderer(
             }
         }
 
-        // Buildings (Grove Circle bungalows, Vinewood storefronts, Downtown landable towers)
+        // Buildings across all 5 districts
         for (b in DistrictMap.buildings) {
             models.spawnModel(b.modelKey, useTargetHeightNormalization = false)?.let {
                 models.setWorldTransform(it, b.x, 0.12f, b.z, yawRad = b.yawDeg * Math3D.DEG_TO_RAD)
@@ -184,7 +196,7 @@ class FilamentRenderer(
             }
         }
 
-        // Palm trees, Poly Haven CC0 street lamps, fire hydrants, concrete barriers
+        // Palm trees & Poly Haven CC0 street lamps, fire hydrants, benches, barrels, barriers
         for (p in DistrictMap.props) {
             models.spawnModel(p.modelKey, useTargetHeightNormalization = true)?.let {
                 models.setWorldTransform(it, p.x, 0.16f, p.z, yawRad = p.yawDeg * Math3D.DEG_TO_RAD)
@@ -203,13 +215,11 @@ class FilamentRenderer(
         val sc = swapChain ?: return
         if (!uiHelper.isReadyToRender) return
 
-        // Update sky/weather/desaturation
         val desaturated = sim.activeBanner == BannerType.WASTED || sim.activeBanner == BannerType.BUSTED
         lighting.applyPreset(sim.weatherPreset, desaturated)
 
         syncDynamicEntities(dt, sim)
 
-        // Update third-person camera
         val speed = sim.playerVel.xz().length()
         val pose = cameraController.update(
             dt = dt,
@@ -221,7 +231,7 @@ class FilamentRenderer(
             shakeIntensity = sim.cameraShake,
             world = sim.world,
         )
-        camera.setProjection(pose.fovDeg, viewportAspect, 0.25, 480.0, Camera.Fov.VERTICAL)
+        camera.setProjection(pose.fovDeg, viewportAspect, 0.25, 520.0, Camera.Fov.VERTICAL)
         camera.lookAt(
             pose.eye.x.toDouble(), pose.eye.y.toDouble(), pose.eye.z.toDouble(),
             pose.target.x.toDouble(), pose.target.y.toDouble(), pose.target.z.toDouble(),
@@ -242,14 +252,11 @@ class FilamentRenderer(
             val showPlayer = sim.playerMode != PlayerMode.DRIVING
             models.setVisible(ph, showPlayer)
             if (showPlayer) {
-                val tiltPitch = if (sim.playerMode == PlayerMode.JETPACK) {
-                    Math3D.clamp(sim.playerVel.xz().length() * 0.025f, 0f, 0.28f)
-                } else 0f
                 models.setWorldTransform(
                     ph,
                     sim.playerPos.x, sim.playerPos.y, sim.playerPos.z,
                     yawRad = sim.playerYawRad,
-                    pitchRad = tiltPitch,
+                    pitchRad = sim.playerPitchVisualRad,
                 )
                 ph.updateAnimation(sim.playerAnimState, dt)
             }
@@ -260,7 +267,6 @@ class FilamentRenderer(
             when {
                 sim.playerMode == PlayerMode.JETPACK -> {
                     models.setVisible(jh, true)
-                    // Mount cleanly on player's upper back (-forward offset)
                     val bx = sim.playerPos.x - sin(sim.playerYawRad) * 0.24f
                     val bz = sim.playerPos.z - cos(sim.playerYawRad) * 0.24f
                     val by = sim.playerPos.y + 0.85f
@@ -281,7 +287,32 @@ class FilamentRenderer(
             }
         }
 
-        // 2. Vehicles (street cars, police cruisers, Monster Trucks, Rhino Army Tanks)
+        // 2. Street Pedestrians, Armed Purple GTA Ballas Gang, & Carjacked Drivers!
+        val liveNpcIds = HashSet<Int>(sim.npcSystem.npcs.size)
+        for (npc in sim.npcSystem.npcs) {
+            if (npc.isDead) continue
+            // Render nearby NPCs within 135m to keep mobile framerate ultra-smooth
+            if (npc.pos.horizontalDistanceTo(sim.playerPos) > 135f) continue
+            liveNpcIds.add(npc.id)
+            val modelKey = if (npc.role == NpcRole.PURPLE_GANG) "character_ballas" else "character_pedestrian"
+            val handle = npcHandles[npc.id]
+                ?: models.spawnModel(modelKey, useTargetHeightNormalization = true)
+                    ?.also { npcHandles[npc.id] = it }
+                ?: continue
+            val staggerRoll = if (npc.staggerTimer > 0f) 0.45f else 0f
+            models.setWorldTransform(handle, npc.pos.x, npc.pos.y, npc.pos.z, yawRad = npc.yawRad, rollRad = staggerRoll)
+            handle.updateAnimation(npc.animState, dt)
+        }
+        val npcIter = npcHandles.entries.iterator()
+        while (npcIter.hasNext()) {
+            val e = npcIter.next()
+            if (!liveNpcIds.contains(e.key)) {
+                models.destroyModel(e.value)
+                npcIter.remove()
+            }
+        }
+
+        // 3. Vehicles (street cars, roaming police, Monster Trucks, Rhino Army Tanks)
         val liveIds = HashSet<Int>(sim.vehicles.size)
         var nearestSirenVehX = 0f
         var nearestSirenVehY = -50f
@@ -328,21 +359,37 @@ class FilamentRenderer(
             }
         }
 
-        // Update flashing red/blue police lightbar point light on closest pursuing cruiser
         val sirenInst = lm.getInstance(sirenLightEntity)
         if (nearestSirenDist < 95f) {
             lm.setPosition(sirenInst, nearestSirenVehX, nearestSirenVehY, nearestSirenVehZ)
-            if (nearestSirenPhase < 1f) {
-                lm.setColor(sirenInst, 1.0f, 0.08f, 0.08f)
-            } else {
-                lm.setColor(sirenInst, 0.08f, 0.38f, 1.0f)
-            }
+            if (nearestSirenPhase < 1f) lm.setColor(sirenInst, 1.0f, 0.08f, 0.08f)
+            else lm.setColor(sirenInst, 0.08f, 0.38f, 1.0f)
             lm.setIntensity(sirenInst, 160_000f)
         } else {
             lm.setIntensity(sirenInst, 0f)
         }
 
-        // 3. Rhino Tank Cannon Shells
+        // 4. Bullet Tracers (Purple Gang / Armed Carjackers / Player gunfights)
+        val liveBulletIds = HashSet<Int>(sim.npcSystem.bullets.size)
+        for (b in sim.npcSystem.bullets) {
+            liveBulletIds.add(b.id)
+            val handle = bulletHandles[b.id]
+                ?: models.spawnModel("fx_bullet", useTargetHeightNormalization = true)
+                    ?.also { bulletHandles[b.id] = it }
+                ?: continue
+            val yaw = atan2(b.vel.x, b.vel.z)
+            models.setWorldTransform(handle, b.pos.x, b.pos.y, b.pos.z, yawRad = yaw)
+        }
+        val bIter = bulletHandles.entries.iterator()
+        while (bIter.hasNext()) {
+            val e = bIter.next()
+            if (!liveBulletIds.contains(e.key)) {
+                models.destroyModel(e.value)
+                bIter.remove()
+            }
+        }
+
+        // 5. Rhino Tank Cannon Shells
         val liveProjIds = HashSet<Int>(sim.projectiles.size)
         for (p in sim.projectiles) {
             liveProjIds.add(p.id)
@@ -361,7 +408,7 @@ class FilamentRenderer(
             }
         }
 
-        // 4. Explosions (expanding fiery spheres)
+        // 6. Explosions
         val liveExpIds = HashSet<Int>(sim.explosions.size)
         for (ex in sim.explosions) {
             liveExpIds.add(ex.id)

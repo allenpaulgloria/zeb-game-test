@@ -1,5 +1,7 @@
 package com.sunsetgrove.game
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.Choreographer
 import android.view.KeyEvent
@@ -22,44 +24,44 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.sunsetgrove.game.audio.MusicManager
 import com.sunsetgrove.game.audio.SoundManager
 import com.sunsetgrove.game.engine.FilamentRenderer
 import com.sunsetgrove.game.gameplay.ControlInput
 import com.sunsetgrove.game.gameplay.GameSimulation
 import com.sunsetgrove.game.gameplay.HudSnapshot
+import com.sunsetgrove.game.gameplay.PlayerMode
 import com.sunsetgrove.game.gameplay.SoundEvents
+import com.sunsetgrove.game.ui.IntroMusicConfig
+import com.sunsetgrove.game.ui.IntroMusicScreen
 import com.sunsetgrove.game.ui.PauseAndCheatsOverlay
-import com.sunsetgrove.game.ui.PersistentIntroAndTrackLayer
 import com.sunsetgrove.game.ui.SanAndreasBannerOverlay
 import com.sunsetgrove.game.ui.SanAndreasStatusHud
 import com.sunsetgrove.game.ui.TouchControlsOverlay
 import com.sunsetgrove.game.ui.TouchInputBridge
-import com.sunsetgrove.game.ui.YouTubeTrackController
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
 
     private lateinit var sim: GameSimulation
     private lateinit var soundManager: SoundManager
-    private lateinit var youTubeController: YouTubeTrackController
+    private lateinit var musicManager: MusicManager
     private var filamentRenderer: FilamentRenderer? = null
     private val touchBridge = TouchInputBridge()
 
     private val hudState = MutableStateFlow(HudSnapshot())
     private var showIntroUi by mutableStateOf(true)
-    private var playTrackInGameUi by mutableStateOf(true)
-    private var miniPlayerExpandedUi by mutableStateOf(false)
+    private var playMusicInGameUi by mutableStateOf(true)
     private var audioMutedUi by mutableStateOf(false)
     private var lastCheatBannerUi by mutableStateOf("")
 
-    // Hardware keyboard keys for seamless emulator testing alongside touch controls
     private val pressedKeys = HashSet<Int>()
+    private var lastKnownMode: PlayerMode = PlayerMode.ON_FOOT
     private var lastFrameNanos: Long = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Immersive fullscreen landscape gaming window
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -68,37 +70,45 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
         }
 
         sim = GameSimulation()
-        sim.isPaused = true // Hold simulation paused while the YouTube intro plays
+        sim.isPaused = true
         soundManager = SoundManager(this)
-        youTubeController = YouTubeTrackController(this)
+        musicManager = MusicManager(this)
 
         setContent {
             SunsetGroveGameScreen()
         }
     }
 
-    private fun setPlayTrackInGame(enabled: Boolean) {
-        playTrackInGameUi = enabled
+    private fun setPlayMusicInGame(enabled: Boolean) {
+        playMusicInGameUi = enabled
         if (!showIntroUi) {
-            if (enabled) youTubeController.play() else youTubeController.pause()
+            if (enabled) musicManager.play() else musicManager.pause()
         }
     }
 
     private fun enterGameFromIntro() {
         showIntroUi = false
         sim.isPaused = false
-        if (playTrackInGameUi) {
-            youTubeController.play()
-        } else {
-            youTubeController.pause()
-        }
+        touchBridge.resetContinuousInputs()
+        pressedKeys.clear()
+        if (playMusicInGameUi) musicManager.play() else musicManager.pause()
     }
 
     private fun replayIntro() {
         showIntroUi = true
         sim.isPaused = true
+        touchBridge.resetContinuousInputs()
+        pressedKeys.clear()
         soundManager.stopLoops()
-        youTubeController.restartAndPlay()
+        musicManager.restartAndPlay()
+    }
+
+    private fun openYouTubeReference() {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(IntroMusicConfig.YOUTUBE_REFERENCE_URL)))
+        } catch (_: Exception) {
+            // No browser/YouTube app installed
+        }
     }
 
     @Composable
@@ -117,21 +127,23 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
                 },
             )
 
-            // 2. Live San Andreas HUD & Multi-Touch Controls (when playing & not paused)
+            // 2. Live San Andreas HUD & Multi-Touch Controls
             if (!showIntroUi && !snapshot.isPaused) {
                 TouchControlsOverlay(
                     snapshot = snapshot,
                     bridge = touchBridge,
-                    trackPlayingInGame = playTrackInGameUi,
+                    musicPlayingInGame = playMusicInGameUi,
                     onPauseClick = {
                         sim.isPaused = true
+                        touchBridge.resetContinuousInputs()
+                        pressedKeys.clear()
                         soundManager.stopLoops()
                     },
                     onCameraToggleClick = {
                         filamentRenderer?.cameraController?.toggleDistancePreset()
                     },
-                    onToggleTrackInGame = {
-                        setPlayTrackInGame(!playTrackInGameUi)
+                    onToggleMusicInGame = {
+                        setPlayMusicInGame(!playMusicInGameUi)
                     },
                 )
 
@@ -145,30 +157,40 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
                 SanAndreasBannerOverlay(
                     banner = snapshot.banner,
                     subtext = snapshot.bannerSubtext,
-                    onTapRespawn = { sim.respawnAtGroveCircle(chargeHospitalFee = true) },
+                    onTapRespawn = {
+                        touchBridge.resetContinuousInputs()
+                        pressedKeys.clear()
+                        sim.respawnAtGroveCircle(chargeHospitalFee = true)
+                    },
                 )
             }
 
-            // 3. Persistent YouTube Intro & In-Game Track Layer (IeIUm-aqaCg)
-            PersistentIntroAndTrackLayer(
-                controller = youTubeController,
-                showIntro = showIntroUi,
-                playTrackInGame = playTrackInGameUi,
-                miniPlayerExpanded = miniPlayerExpandedUi,
-                onTogglePlayInGame = { enabled -> setPlayTrackInGame(enabled) },
-                onToggleMiniExpanded = { miniPlayerExpandedUi = !miniPlayerExpandedUi },
-                onEnterGame = { enterGameFromIntro() },
-            )
+            // 3. Pure Audio-Only Intro Screen (NO video box!)
+            if (showIntroUi) {
+                IntroMusicScreen(
+                    trackLabel = musicManager.activeTrackLabel,
+                    playMusicInGame = playMusicInGameUi,
+                    onTogglePlayMusicInGame = { setPlayMusicInGame(it) },
+                    onOpenYouTubeReference = { openYouTubeReference() },
+                    onEnterGame = { enterGameFromIntro() },
+                )
+            }
 
-            // 4. San Andreas Pause Menu & Double-Tap Cheat Codes Overlay (above mini-player)
+            // 4. Pause Menu & Double-Tap Cheat Codes Overlay
             if (!showIntroUi && snapshot.isPaused) {
                 PauseAndCheatsOverlay(
                     activeCheatCodes = snapshot.activeCheatCodes,
                     audioMuted = audioMutedUi,
-                    playTrackInGame = playTrackInGameUi,
+                    playTrackInGame = playMusicInGameUi,
                     lastCheatMessage = lastCheatBannerUi,
-                    onResume = { sim.isPaused = false },
-                    onRespawn = { sim.respawnAtGroveCircle(chargeHospitalFee = false) },
+                    onResume = {
+                        touchBridge.resetContinuousInputs()
+                        sim.isPaused = false
+                    },
+                    onRespawn = {
+                        touchBridge.resetContinuousInputs()
+                        sim.respawnAtGroveCircle(chargeHospitalFee = false)
+                    },
                     onClearCheats = {
                         sim.clearAllCheats()
                         lastCheatBannerUi = "All toggle cheats cleared"
@@ -178,7 +200,7 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
                         soundManager.muted = audioMutedUi
                     },
                     onToggleTrackInGame = {
-                        setPlayTrackInGame(!playTrackInGameUi)
+                        setPlayMusicInGame(!playMusicInGameUi)
                     },
                     onReplayIntro = { replayIntro() },
                     onCheatDoubleTapped = { code ->
@@ -217,6 +239,13 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
 
         val input = buildMergedInput(camYaw)
         val snapshot = sim.step(dt, input, camYaw)
+
+        // Reset continuous inputs whenever playerMode transitions (e.g. exiting car -> on foot)
+        if (snapshot.playerMode != lastKnownMode) {
+            lastKnownMode = snapshot.playerMode
+            touchBridge.resetContinuousInputs()
+        }
+
         hudState.value = snapshot
         soundManager.update(snapshot)
         filamentRenderer?.renderFrame(frameTimeNanos, dt, sim)
@@ -233,9 +262,11 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
         val moveY = if (keyFwd || keyBack) ((if (keyFwd) 1f else 0f) - (if (keyBack) 1f else 0f)) else touchBridge.stickY
 
         val jump = touchBridge.jumpQueued
+        val shoot = touchBridge.shootQueued
         val enterExit = touchBridge.enterExitQueued
         val fireCannon = touchBridge.fireCannonQueued
         touchBridge.jumpQueued = false
+        touchBridge.shootQueued = false
         touchBridge.enterExitQueued = false
         touchBridge.fireCannonQueued = false
 
@@ -244,6 +275,7 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
             moveY = moveY,
             sprint = touchBridge.sprint || pressedKeys.contains(KeyEvent.KEYCODE_SHIFT_LEFT),
             jumpPressed = jump,
+            shootPressed = shoot,
             gas = if (touchBridge.gas || keyFwd) 1f else 0f,
             brake = if (touchBridge.brake || keyBack) 1f else 0f,
             handbrake = touchBridge.handbrake || pressedKeys.contains(KeyEvent.KEYCODE_SPACE),
@@ -261,13 +293,15 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
         when (keyCode) {
             KeyEvent.KEYCODE_E, KeyEvent.KEYCODE_F -> touchBridge.enterExitQueued = true
             KeyEvent.KEYCODE_SPACE -> touchBridge.jumpQueued = true
+            KeyEvent.KEYCODE_J -> touchBridge.shootQueued = true
             KeyEvent.KEYCODE_ENTER -> {
                 if (showIntroUi) enterGameFromIntro() else touchBridge.fireCannonQueued = true
             }
-            KeyEvent.KEYCODE_M -> setPlayTrackInGame(!playTrackInGameUi)
+            KeyEvent.KEYCODE_M -> setPlayMusicInGame(!playMusicInGameUi)
             KeyEvent.KEYCODE_ESCAPE, KeyEvent.KEYCODE_P -> {
                 if (!showIntroUi) {
                     sim.isPaused = !sim.isPaused
+                    touchBridge.resetContinuousInputs()
                     if (sim.isPaused) soundManager.stopLoops()
                 }
             }
@@ -284,21 +318,23 @@ class MainActivity : ComponentActivity(), Choreographer.FrameCallback {
         super.onResume()
         lastFrameNanos = 0L
         Choreographer.getInstance().postFrameCallback(this)
-        youTubeController.onActivityResume(shouldBePlaying = showIntroUi || playTrackInGameUi)
+        musicManager.onActivityResume(shouldBePlaying = showIntroUi || playMusicInGameUi)
     }
 
     override fun onPause() {
         super.onPause()
         Choreographer.getInstance().removeFrameCallback(this)
+        touchBridge.resetContinuousInputs()
+        pressedKeys.clear()
         soundManager.stopLoops()
-        youTubeController.onActivityPause()
+        musicManager.onActivityPause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         Choreographer.getInstance().removeFrameCallback(this)
         soundManager.release()
-        youTubeController.destroy()
+        musicManager.release()
         filamentRenderer?.destroy()
         filamentRenderer = null
     }

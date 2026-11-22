@@ -15,6 +15,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +38,8 @@ import kotlin.math.sqrt
 
 /**
  * Shared thread-safe touch control state consumed every 60Hz frame by GameSimulation.
+ * Includes resetContinuousInputs() to permanently prevent stuck-forward movement
+ * when transitioning between On-Foot, Carjacking, Driving, Swimming, and Jetpack modes!
  */
 class TouchInputBridge {
     @Volatile var stickX: Float = 0f
@@ -52,12 +56,26 @@ class TouchInputBridge {
 
     // One-shot latches consumed on next simulation frame
     @Volatile var jumpQueued: Boolean = false
+    @Volatile var shootQueued: Boolean = false
     @Volatile var enterExitQueued: Boolean = false
     @Volatile var fireCannonQueued: Boolean = false
 
-    // Camera orbit delta accumulator
     private var camDx = 0f
     private var camDy = 0f
+
+    fun resetContinuousInputs() {
+        stickX = 0f
+        stickY = 0f
+        steerLeft = false
+        steerRight = false
+        gas = false
+        brake = false
+        handbrake = false
+        nitro = false
+        sprint = false
+        jetpackAscend = false
+        jetpackDescend = false
+    }
 
     @Synchronized
     fun addCameraDrag(dx: Float, dy: Float) {
@@ -74,21 +92,21 @@ class TouchInputBridge {
     }
 }
 
-/**
- * Responsive multi-touch overlay adapting automatically across:
- * - ON_FOOT: Virtual stick + Sprint + Jump + contextual Enter Vehicle
- * - JETPACK: Virtual stick + ASCEND + DESCEND + DROP JETPACK
- * - DRIVING: Left/Right steer + Gas/Brake/Drift + contextual NITRO + Rhino Tank FIRE CANNON
- */
 @Composable
 fun TouchControlsOverlay(
     snapshot: HudSnapshot,
     bridge: TouchInputBridge,
-    trackPlayingInGame: Boolean,
+    musicPlayingInGame: Boolean,
     onPauseClick: () -> Unit,
     onCameraToggleClick: () -> Unit,
-    onToggleTrackInGame: () -> Unit,
+    onToggleMusicInGame: () -> Unit,
 ) {
+    // BUG FIX: Clear any held joystick/gas/steer state immediately on every mode transition
+    // so exiting or entering a car NEVER leaves the player stuck walking forward!
+    LaunchedEffect(snapshot.playerMode) {
+        bridge.resetContinuousInputs()
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Right-half invisible touch-drag camera orbit surface (behind buttons)
         Box(
@@ -102,7 +120,7 @@ fun TouchControlsOverlay(
                 }
         )
 
-        // Top-Left: PAUSE (||) button, CAM toggle, Music Track toggle, & Cheat Activated corner toast
+        // Top-Left: PAUSE (||), CAM, Pure Audio Music toggle, & Cheat Activated corner toast
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -113,9 +131,9 @@ fun TouchControlsOverlay(
             TapActionChip("|| PAUSE", Color(0xFFFFB300), onPauseClick)
             TapActionChip("CAM", Color(0xFF90CAF9), onCameraToggleClick)
             TapActionChip(
-                label = if (trackPlayingInGame) "♫ TRACK: ON" else "♫ TRACK: OFF",
-                accent = if (trackPlayingInGame) Color(0xFF66BB6A) else Color(0xFF78909C),
-                onClick = onToggleTrackInGame,
+                label = if (musicPlayingInGame) "♫ MUSIC: ON" else "♫ MUSIC: OFF",
+                accent = if (musicPlayingInGame) Color(0xFF66BB6A) else Color(0xFF78909C),
+                onClick = onToggleMusicInGame,
             )
             CheatActivatedCornerToast(
                 message = snapshot.cheatToastMessage,
@@ -138,7 +156,7 @@ fun TouchControlsOverlay(
                     HoldCircleButton("◀", 64.dp, Color(0xFF90CAF9)) { bridge.steerLeft = it }
                     HoldCircleButton("▶", 64.dp, Color(0xFF90CAF9)) { bridge.steerRight = it }
                 }
-            } else {
+            } else if (snapshot.playerMode != PlayerMode.CARJACKING) {
                 VirtualJoystick(
                     size = 114.dp,
                     onMove = { x, y ->
@@ -163,13 +181,24 @@ fun TouchControlsOverlay(
                 PlayerMode.ON_FOOT -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (snapshot.nearbyVehicleName != null) {
-                            TapCircleButton("ENTER\n${snapshot.nearbyVehicleName.take(8).uppercase()}", 70.dp, Color(0xFF66BB6A)) {
+                            TapCircleButton("STEAL /\nENTER", 68.dp, Color(0xFF66BB6A)) {
                                 bridge.enterExitQueued = true
                             }
                         }
-                        TapCircleButton("JUMP", 58.dp, Color(0xFFFFCA28)) { bridge.jumpQueued = true }
-                        HoldCircleButton("SPRINT", 66.dp, Color(0xFF42A5F5)) { bridge.sprint = it }
+                        TapCircleButton("SHOOT", 62.dp, Color(0xFFEF5350)) { bridge.shootQueued = true }
+                        TapCircleButton("JUMP", 56.dp, Color(0xFFFFCA28)) { bridge.jumpQueued = true }
+                        HoldCircleButton("SPRINT", 64.dp, Color(0xFF42A5F5)) { bridge.sprint = it }
                     }
+                }
+
+                PlayerMode.SWIMMING -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        HoldCircleButton("SWIM\nFAST", 70.dp, Color(0xFF29B6F6)) { bridge.sprint = it }
+                    }
+                }
+
+                PlayerMode.CARJACKING -> {
+                    // Animation playing — no inputs needed
                 }
 
                 PlayerMode.JETPACK -> {
@@ -212,6 +241,9 @@ private fun VirtualJoystick(
     onMove: (Float, Float) -> Unit,
 ) {
     var knobOffset by remember { mutableStateOf(Offset.Zero) }
+    DisposableEffect(Unit) {
+        onDispose { onMove(0f, 0f) }
+    }
     Box(
         modifier = Modifier
             .size(size)
@@ -236,7 +268,6 @@ private fun VirtualJoystick(
                     val dist = sqrt(next.x * next.x + next.y * next.y)
                     val clamped = if (dist > maxR && dist > 1e-4f) next * (maxR / dist) else next
                     knobOffset = clamped
-                    // Screen right = +X, Screen up = +Y forward
                     onMove((clamped.x / maxR).coerceIn(-1f, 1f), (-clamped.y / maxR).coerceIn(-1f, 1f))
                 }
             },
@@ -261,6 +292,9 @@ private fun HoldCircleButton(
     onHeldChange: (Boolean) -> Unit,
 ) {
     var pressed by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        onDispose { onHeldChange(false) }
+    }
     Box(
         modifier = Modifier
             .size(size)

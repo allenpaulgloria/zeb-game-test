@@ -5,6 +5,8 @@ import com.sunsetgrove.game.world.Vec3
 
 enum class PlayerMode {
     ON_FOOT,
+    SWIMMING,
+    CARJACKING,
     JETPACK,
     DRIVING,
 }
@@ -37,7 +39,7 @@ enum class VehicleArchetype(
     val isTank: Boolean = false,
     val isMonsterTruck: Boolean = false,
 ) {
-    SEDAN("Premier Sedan", "car_sedan", 28f, 15f, 10f, 2.3f, 6.2f, 1.3f, 100f, 1.9f),
+    SEDAN("Greenwood Sedan", "car_sedan", 28f, 15f, 10f, 2.3f, 6.2f, 1.3f, 100f, 1.9f),
     MUSCLE("Sabre GT", "car_muscle", 34f, 19f, 11f, 2.4f, 5.2f, 1.45f, 115f, 1.95f),
     POLICE("LSPD Cruiser 94", "car_police", 36f, 21f, 12f, 2.5f, 6.8f, 1.7f, 130f, 1.95f, isPolice = true),
     HOTRING("Hotring Racer #1", "car_hotring", 44f, 26f, 13f, 2.75f, 7.6f, 1.35f, 125f, 1.95f),
@@ -57,12 +59,13 @@ enum class VehicleArchetype(
 }
 
 data class ControlInput(
-    val moveX: Float = 0f,          // -1..1 (left/right stick or steering)
-    val moveY: Float = 0f,          // -1..1 (forward/back stick)
+    val moveX: Float = 0f,
+    val moveY: Float = 0f,
     val sprint: Boolean = false,
     val jumpPressed: Boolean = false,
-    val gas: Float = 0f,            // 0..1
-    val brake: Float = 0f,          // 0..1
+    val shootPressed: Boolean = false,
+    val gas: Float = 0f,
+    val brake: Float = 0f,
     val handbrake: Boolean = false,
     val nitro: Boolean = false,
     val jetpackAscend: Boolean = false,
@@ -71,7 +74,7 @@ data class ControlInput(
     val enterExitPressed: Boolean = false,
     val cameraYawDelta: Float = 0f,
     val cameraPitchDelta: Float = 0f,
-    val cameraAimYaw: Float = 0f,   // Current third-person camera yaw (rad)
+    val cameraAimYaw: Float = 0f,
 )
 
 data class VehicleState(
@@ -82,14 +85,15 @@ data class VehicleState(
     var yawRad: Float = 0f,
     var pitchRad: Float = 0f,
     var rollRad: Float = 0f,
-    var turretYawRad: Float = 0f,   // World-space turret yaw for Rhino Tank
+    var turretYawRad: Float = 0f,
     var cannonCooldown: Float = 0f,
-    var speed: Float = 0f,          // Signed forward speed m/s
+    var speed: Float = 0f,
     var health: Float = archetype.maxHealth,
     var isWrecked: Boolean = false,
     var isPlayerControlled: Boolean = false,
     var isTrafficAi: Boolean = false,
     var isPoliceAi: Boolean = false,
+    var hasNpcDriver: Boolean = false,
     var sirenActive: Boolean = false,
     var sirenPhase: Float = 0f,
     var suspensionBounce: Float = 0f,
@@ -115,7 +119,7 @@ data class ExplosionFx(
     val maxRadius: Float = 7.5f,
 )
 
-enum class BlipKind { VEHICLE, TANK, MONSTER, POLICE }
+enum class BlipKind { VEHICLE, TANK, MONSTER, POLICE, PURPLE_GANG }
 
 data class RadarBlip(
     val x: Float,
@@ -133,6 +137,8 @@ data class SoundEvents(
     val wastedTriggered: Boolean = false,
     val bustedTriggered: Boolean = false,
     val respectTriggered: Boolean = false,
+    val gunshotFired: Boolean = false,
+    val batHit: Boolean = false,
 )
 
 data class HudSnapshot(
@@ -148,7 +154,7 @@ data class HudSnapshot(
     val speedKmh: Int = 0,
     val altitudeMeters: Int = 0,
     val nearbyVehicleName: String? = null,
-    val districtName: String = "Grove Circle",
+    val districtName: String = "Grove Street",
     val districtToastAlpha: Float = 0f,
     val vehicleToastName: String = "",
     val vehicleToastAlpha: Float = 0f,
@@ -169,5 +175,6 @@ data class HudSnapshot(
     val arrestedProgress: Float = 0f,
     val sirenActive: Boolean = false,
     val jetpackActive: Boolean = false,
+    val isSwimming: Boolean = false,
     val soundEvents: SoundEvents = SoundEvents(),
 )

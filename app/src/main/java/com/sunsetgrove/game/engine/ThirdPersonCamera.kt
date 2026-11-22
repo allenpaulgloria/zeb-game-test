@@ -64,7 +64,8 @@ class ThirdPersonCamera {
         }
 
         val baseDist = when (mode) {
-            PlayerMode.ON_FOOT -> if (closeMode) 3.6f else 4.9f
+            PlayerMode.ON_FOOT, PlayerMode.CARJACKING -> if (closeMode) 3.6f else 4.9f
+            PlayerMode.SWIMMING -> if (closeMode) 4.2f else 5.6f
             PlayerMode.JETPACK -> if (closeMode) 5.2f else 6.8f
             PlayerMode.DRIVING -> when {
                 vehicleArchetype?.isTank == true -> if (closeMode) 8.4f else 10.6f
@@ -73,7 +74,8 @@ class ThirdPersonCamera {
             }
         }
         val focusHeight = when (mode) {
-            PlayerMode.ON_FOOT -> 1.48f
+            PlayerMode.ON_FOOT, PlayerMode.CARJACKING -> 1.48f
+            PlayerMode.SWIMMING -> 1.15f
             PlayerMode.JETPACK -> 1.65f
             PlayerMode.DRIVING -> when {
                 vehicleArchetype?.isTank == true -> 2.3f

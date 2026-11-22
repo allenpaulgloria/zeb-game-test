@@ -125,6 +125,10 @@ fun SanAndreasStatusHud(
                 HudPill("${snapshot.speedKmh} KM/H", Color(0xFFFFD54F))
             } else if (snapshot.playerMode == PlayerMode.JETPACK) {
                 HudPill("JETPACK  ALT ${snapshot.altitudeMeters}M", Color(0xFF4FC3F7))
+            } else if (snapshot.playerMode == PlayerMode.SWIMMING) {
+                HudPill("SWIMMING", Color(0xFF29B6F6))
+            } else if (snapshot.playerMode == PlayerMode.CARJACKING) {
+                HudPill("CARJACKING...", Color(0xFFFFB74D))
             }
             if (snapshot.neverWantedActive) {
                 HudPill("AEZAKMI", Color(0xFF81C784))

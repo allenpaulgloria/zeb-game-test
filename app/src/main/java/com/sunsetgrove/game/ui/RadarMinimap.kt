@@ -95,20 +95,19 @@ fun RadarMinimap(
                 strokeWidth = 110f * scale,
             )
 
-            // 2. Street grid lines
+            // 2. Extended Street grid lines (4 N-S avenues, 5 E-W boulevards + Grove cul-de-sac)
             val roadColor = Color(0xFF4F545A)
             val roadW = 14f * scale
-            for (x in listOf(-70f, 0f, 70f)) {
-                drawLine(roadColor, worldToRadar(x, -150f), worldToRadar(x, 150f), strokeWidth = roadW, cap = StrokeCap.Square)
+            for (x in listOf(-70f, 0f, 70f, 140f)) {
+                drawLine(roadColor, worldToRadar(x, -170f), worldToRadar(x, 170f), strokeWidth = roadW, cap = StrokeCap.Square)
             }
-            for (z in listOf(-80f, 0f, 80f)) {
-                drawLine(roadColor, worldToRadar(-100f, z), worldToRadar(120f, z), strokeWidth = roadW, cap = StrokeCap.Square)
+            for (z in listOf(-160f, -80f, 0f, 80f, 160f)) {
+                drawLine(roadColor, worldToRadar(-85f, z), worldToRadar(155f, z), strokeWidth = roadW, cap = StrokeCap.Square)
             }
-            // Grove Circle cul-de-sac bulb
             drawCircle(
                 color = roadColor,
                 radius = 15f * scale,
-                center = worldToRadar(118f, 0f),
+                center = worldToRadar(116f, 0f),
             )
 
             // 3. Building footprints
@@ -151,6 +150,10 @@ fun RadarMinimap(
                     BlipKind.MONSTER -> {
                         drawRect(Color.Black, topLeft = Offset(p.x - 5.5f, p.y - 5.5f), size = Size(11f, 11f))
                         drawRect(Color(0xFF38BDF8), topLeft = Offset(p.x - 4f, p.y - 4f), size = Size(8f, 8f))
+                    }
+                    BlipKind.PURPLE_GANG -> {
+                        drawCircle(Color.Black, radius = 5.2f, center = p)
+                        drawCircle(Color(0xFFBA68C8), radius = 3.8f, center = p)
                     }
                     BlipKind.VEHICLE -> {
                         drawCircle(Color(0xCCFFE082), radius = 3.2f, center = p)

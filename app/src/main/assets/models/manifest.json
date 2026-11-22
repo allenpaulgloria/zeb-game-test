@@ -125,6 +125,36 @@
       "path": "models/world/stunt_ramp.glb",
       "targetHeight": 2.6,
       "yawOffsetDeg": 0.0
+    },
+    "character_pedestrian": {
+      "path": "models/character_pedestrian.glb",
+      "targetHeight": 1.76,
+      "yawOffsetDeg": 180.0
+    },
+    "character_ballas": {
+      "path": "models/character_ballas.glb",
+      "targetHeight": 1.82,
+      "yawOffsetDeg": 180.0
+    },
+    "fx_bullet": {
+      "path": "models/props/bullet_tracer.glb",
+      "targetHeight": 0.14,
+      "yawOffsetDeg": 0.0
+    },
+    "world_beach_pier": {
+      "path": "models/world/beach_pier.glb",
+      "targetHeight": 2.6,
+      "yawOffsetDeg": 0.0
+    },
+    "prop_bench": {
+      "path": "models/props/wooden_bench.glb",
+      "targetHeight": 0.95,
+      "yawOffsetDeg": 0.0
+    },
+    "prop_barrel": {
+      "path": "models/props/street_barrel.glb",
+      "targetHeight": 1.0,
+      "yawOffsetDeg": 0.0
     }
   }
 }

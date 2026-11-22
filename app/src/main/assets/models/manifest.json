@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "models": {
+    "character_player": {
+      "path": "models/character_player.glb",
+      "targetHeight": 1.8,
+      "yawOffsetDeg": 180.0
+    },
+    "car_sedan": {
+      "path": "models/car_sedan.glb",
+      "targetHeight": 1.48,
+      "yawOffsetDeg": 0.0
+    },
+    "car_muscle": {
+      "path": "models/car_muscle.glb",
+      "targetHeight": 1.46,
+      "yawOffsetDeg": 0.0
+    },
+    "car_police": {
+      "path": "models/car_police.glb",
+      "targetHeight": 1.62,
+      "yawOffsetDeg": 0.0
+    },
+    "car_hotring": {
+      "path": "models/car_hotring.glb",
+      "targetHeight": 1.44,
+      "yawOffsetDeg": 0.0
+    },
+    "car_bloodring": {
+      "path": "models/car_bloodring.glb",
+      "targetHeight": 1.54,
+      "yawOffsetDeg": 0.0
+    },
+    "vehicle_tank": {
+      "path": "models/vehicle_tank.glb",
+      "targetHeight": 2.48,
+      "yawOffsetDeg": 0.0
+    },
+    "vehicle_monster_truck": {
+      "path": "models/vehicle_monster_truck.glb",
+      "targetHeight": 3.4,
+      "yawOffsetDeg": 0.0
+    },
+    "gear_jetpack": {
+      "path": "models/gear_jetpack.glb",
+      "targetHeight": 1.05,
+      "yawOffsetDeg": 0.0
+    },
+    "prop_palm_tree": {
+      "path": "models/props/palm_tree.glb",
+      "targetHeight": 11.8,
+      "yawOffsetDeg": 0.0
+    },
+    "prop_street_lamp": {
+      "path": "models/props/street_lamp.glb",
+      "targetHeight": 7.2,
+      "yawOffsetDeg": 0.0
+    },
+    "prop_fire_hydrant": {
+      "path": "models/props/fire_hydrant.glb",
+      "targetHeight": 0.95,
+      "yawOffsetDeg": 0.0
+    },
+    "prop_concrete_barrier": {
+      "path": "models/props/concrete_barrier.glb",
+      "targetHeight": 0.96,
+      "yawOffsetDeg": 0.0
+    },
+    "fx_explosion": {
+      "path": "models/props/explosion_fx.glb",
+      "targetHeight": 2.0,
+      "yawOffsetDeg": 0.0
+    },
+    "fx_tank_shell": {
+      "path": "models/props/tank_shell.glb",
+      "targetHeight": 0.45,
+      "yawOffsetDeg": 0.0
+    },
+    "world_ground_grass": {
+      "path": "models/world/ground_grass.glb",
+      "targetHeight": 0.2,
+      "yawOffsetDeg": 0.0
+    },
+    "world_ground_beach": {
+      "path": "models/world/ground_beach.glb",
+      "targetHeight": 0.24,
+      "yawOffsetDeg": 0.0
+    },
+    "world_ground_ocean": {
+      "path": "models/world/ground_ocean.glb",
+      "targetHeight": 0.12,
+      "yawOffsetDeg": 0.0
+    },
+    "world_road_strip": {
+      "path": "models/world/road_strip.glb",
+      "targetHeight": 0.26,
+      "yawOffsetDeg": 0.0
+    },
+    "world_sidewalk_strip": {
+      "path": "models/world/sidewalk_strip.glb",
+      "targetHeight": 0.36,
+      "yawOffsetDeg": 0.0
+    },
+    "world_bungalow": {
+      "path": "models/world/building_bungalow.glb",
+      "targetHeight": 6.45,
+      "yawOffsetDeg": 0.0
+    },
+    "world_storefront": {
+      "path": "models/world/building_storefront.glb",
+      "targetHeight": 9.9,
+      "yawOffsetDeg": 0.0
+    },
+    "world_tower_med": {
+      "path": "models/world/building_tower_med.glb",
+      "targetHeight": 18.9,
+      "yawOffsetDeg": 0.0
+    },
+    "world_tower_tall": {
+      "path": "models/world/building_tower_tall.glb",
+      "targetHeight": 26.9,
+      "yawOffsetDeg": 0.0
+    },
+    "world_stunt_ramp": {
+      "path": "models/world/stunt_ramp.glb",
+      "targetHeight": 2.6,
+      "yawOffsetDeg": 0.0
+    }
+  }
+}

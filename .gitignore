@@ -1,0 +1,17 @@
+# Gradle & Kotlin build artifacts
+.gradle/
+.kotlin/
+build/
+app/build/
+local.properties
+
+# Local asset download cache (downloaded models live in app/src/main/assets/)
+tools/.asset_cache/
+tools/__pycache__/
+
+# IDE files
+.idea/
+*.iml
+*.hprof
+.DS_Store
+Thumbs.db
